@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suyong Kim</title>
+    <style>
+        body {
+            font-family: "Times New Roman", Times, serif;
+            margin: 0;
+            padding: 0;
+            font-size: 17px;
+        }
+        header {
+            background-color: #25274D;
+            color: white;
+            padding: 20px;
+            font-size: 24px;
+            text-align: center;
+        }
+        .content {
+            max-width: 1000px;
+            margin: 20px auto;
+            padding: 20px;
+            text-align: left;
+        }
+        .profile {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .profile img {
+            max-width: 300px;
+            height: auto;
+            margin-right: 20px;
+        }
+        .profile .details {
+            flex-grow: 1;
+            min-width: 250px;
+        }
+        .research {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .research img {
+            max-width: 150px;
+            height: auto;
+            margin-right: 20px;
+        }
+        .research .details {
+            flex-grow: 1;
+            min-width: 250px;
+        }
+        .links {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        .links a img {
+            width: 40px;
+            height: auto;
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+        }
+        footer {
+            background-color: #25274D;
+            color: white;
+            padding: 10px;
+            text-align: center;
+            position: relative;
+            bottom: 0;
+            width: 100%;
+        }
+        ul {
+            list-style-position: inside;
+            padding-left: 0;
+        }
+        li {
+            margin: 5px 0;
+        }
+        .publication {
+            margin-bottom: 15px;
+        }
+        @media (max-width: 600px) {
+            .profile {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .profile img {
+                margin-bottom: 10px;
+                margin-right: 0;
+            }
+            .links {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .research {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .research img {
+                margin-bottom: 10px;
+                margin-right: 0;
+            }
+        }
+    </style>
+    <script>
+        async function loadPublications() {
+            const bibFiles = [
+                { file: 'publication/publication_journal.bib', container: 'publications_journal' },
+                { file: 'publication/publication_proceeding.bib', container: 'publications_proceeding' },
+                { file: 'publication/publication_ongoing.bib', container: 'publications_ongoing' }
+            ];
+            
+            for (let bib of bibFiles) {
+                try {
+                    const response = await fetch(bib.file);
+                    const text = await response.text();
+                    let publications = parseBibTeX(text);
+                    publications.sort((a, b) => (b.fields.year || 0) - (a.fields.year || 0));
+                    displayPublications(publications, bib.container);
+                } catch (error) {
+                    console.error(`Error loading ${bib.file}:`, error);
+                    document.getElementById(bib.container).innerText = 'Failed to load publications.';
+                }
+            }
+        }
+        
+        function parseBibTeX(bibText) {
+            const entries = bibText.split('@').slice(1);
+            return entries.map(entry => {
+                const typeMatch = entry.match(/(\w+)\s*{([^,]+)/);
+                const fields = {};
+                entry.split('\n').forEach(line => {
+                    const match = line.match(/(\w+)\s*=\s*{(.+?)}/);
+                    if (match) {
+                        fields[match[1].toLowerCase()] = match[2];
+                    }
+                });
+                return {
+                    type: typeMatch ? typeMatch[1] : 'Unknown',
+                    key: typeMatch ? typeMatch[2] : 'Unknown',
+                    fields
+                };
+            });
+        }
+
+        function highlightAuthor(authors) {
+            return authors.split('and').map(author => {
+                let trimmedAuthor = author.trim();
+                if (trimmedAuthor.includes('S. Kim')) {
+                    if (trimmedAuthor.includes('#')) {
+                        return `<strong>${trimmedAuthor.replace('#', '')}<sup>#</sup></strong>`;
+                    } else if (trimmedAuthor.includes('*')) {
+                        return `<strong>${trimmedAuthor.replace('*', '')}<sup>*</sup></strong>`;
+                    }
+                    return `<strong>${trimmedAuthor}</strong>`;
+                } else {
+                    if (trimmedAuthor.includes('#')) {
+                        return `${trimmedAuthor.replace('#', '')}<sup>#</sup>`;
+                    } else if (trimmedAuthor.includes('*')) {
+                        return `${trimmedAuthor.replace('*', '')}<sup>*</sup>`;
+                    }
+                    return trimmedAuthor;
+                }
+            }).join(', ');
+        }
+        
+        function displayPublications(publications, containerId) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            publications.forEach((pub, index) => {
+                const authors = pub.fields.author ? highlightAuthor(pub.fields.author) : 'Unknown Author';
+                const doi = pub.fields.doi ? ` <a href="https://doi.org/${pub.fields.doi}" target="_blank">[doi]</a>` : '';
+                const source_code = pub.fields.code ? ` <a href="${pub.fields.code}" target="_blank">[code]</a>` : '';
+                const div = document.createElement('div');
+                div.classList.add('publication');
+                div.innerHTML = `${index + 1}. ${authors},
+                                 ${pub.fields.title || 'Untitled'},
+                                 <strong><em>${pub.fields.journal || pub.fields.booktitle || 'Unknown Journal'}</em></strong> ${pub.fields.volume || ''} (${pub.fields.year || 'Unknown Year'}).${doi}${source_code}`;
+                container.appendChild(div);
+            });
+        }
+
+        window.onload = loadPublications;
+    </script>
+    <link rel="icon" href="assets/favicon.ico" type="image/x-icon">
+</head>
+<body>
+    <header>
+        <strong>Suyong Kim @ MIT</strong>
+    </header>
+    <div class="content">
+        <div class="profile">
+            <img src="images/headshot.jpg" alt="My Photo">
+            <div class="details">
+                <p style="font-size: 22px; line-height: 28px;"><strong>Suyong Kim</strong></p>
+                <p style="line-height: 28px;">Postdoctoral Associate<br>
+                Department of Mechanical Engineering<br>
+                Massachusetts Institute of Technology<br><br>
+
+                <strong>Contact:</strong><br>
+                <a href="mailto:suyong@mit.edu">suyong@mit.edu</a><br><br>
+
+                <strong>Address:</strong><br>
+                77 Massachusetts Ave., Room 3-339L<br>
+                Cambridge, MA 02139, USA
+                </p>
+
+
+                <div class="links">
+                <a href="https://scholar.google.com/citations?user=kktr1csAAAAJ&hl=en" target="_blank">
+                    <img src="assets/google-scholar-logo.png" alt="Google Scholar">
+                </a>
+                <a href="https://orcid.org/0000-0002-7999-1147" target="_blank">
+                    <img src="assets/orcid-logo.png" alt="ORCID">
+                </a>
+                <a href="https://github.com/suyongk" target="_blank">
+                    <img src="assets/github-logo.png" alt="GitHub">
+                </a>
+            </div>
+                
+            </div>
+        </div>
+
+        <div class="bio">
+            <p>Please find <a href="cv/Curriculum_Vitae_Suyong Kim.pdf" target="_blank">my curriculum vitae</a> for more information about my research and publications.</p>
+        </div>
+
+        
+        
+        <div style="height: 40px;"></div>
+        <h2>Education</h2>
+        <p style="margin-left: 15px;">Ph.D., Mechanical Engineering, Massachusetts Institute of Technology</p>
+        <p style="margin-left: 15px;">M.S., Mechanical Engineering, Seoul National University</p>
+        <p style="margin-left: 15px;">B.S., Mechanical and Aerospace Engineering, Seoul National University</p>
+
+        <!--
+        <div style="height: 40px;"></div>
+        <h2>Research</h2>
+        <p>My view on research</p>
+
+        <h3 style="margin-left: 15px;">1. AI for Science</h3>
+        <p style="margin-left: 15px;"> Welcome to my research page. Here, I share insights and findings from my work.</p>
+
+        <h3 style="margin-left: 15px;">2. Diagnostics</h3>
+        <div style="margin-left: 15px;" class="research">
+            <img src="images/headshot.jpg" alt="My Photo">
+            <div class="details">
+                Description here!!
+            </div>
+        </div>
+
+        <h3 style="margin-left: 15px;">3. Energy and Propulsion</h3>
+        <div style="margin-left: 15px;" class="research">
+            <video height="200" autoplay loop muted playsinline>
+                <source src="images/research1.mp4" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+            <div style="margin-left: 15px;" class="details">
+                Here, I have 
+                <ul>
+                    <li>one</li>
+                    <li>two</li>
+                    <li>three</li>
+                  </ul>
+            </div>
+        </div>
+        -->
+
+        <div style="height: 50px;"></div>
+        <h2>Publications</h2>
+        <p>(<sup>#</sup> Equal contribution, <sup>*</sup> Corresponding authors)</p>
+        
+        <h3 style="margin-left: 15px;">In peer review</h3>
+        <div style="margin-left: 15px;" id="publications_ongoing">Loading publications...</div>
+
+        <div style="height: 5px;"></div>
+        <h3 style="margin-left: 15px;">Published journal articles</h3>
+        <div style="margin-left: 15px;" id="publications_journal">Loading publications...</div>
+
+        <div style="height: 5px;"></div>
+        <h3 style="margin-left: 15px;">Refereed conference proceedings</h3>
+        <div style="margin-left: 15px;" id="publications_proceeding">Loading publications...</div>
+
+
+    </div>
+    <footer>
+        &copy; 2025 Suyong Kim | All rights reserved.
+    </footer>
+</body>
+</html>
